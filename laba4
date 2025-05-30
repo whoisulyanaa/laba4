@@ -1,0 +1,100 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+def read_matrix_from_file(filename):
+    with open(filename, 'r') as f:
+        return np.array([list(map(int, line.split())) for line in f])
+
+def main():
+    k = int(input("Введите k: "))
+    n = int(input("Введите размер матрицы N: "))
+    with open('3.txt') as f: #!!!Главное чтобы размер матрицы в файле была равна вводу k и n.
+        A = np.array([list(map(int, line.split()))[:n] for line in f][:n])
+    print("Исходная матрица A:\n", A)
+    F = A.copy()
+    half = n // 2
+
+    E = F[half:, :half] if n % 2 == 0 else F[half + 1:, :half + 1]
+
+    # Количество чисел, больших K в четных столбцах E
+    count_greater_k_even_cols = sum(1 for j in range(E.shape[1]) if j % 2 == 0 for i in range(E.shape[0]) if E[i, j] > k)
+
+    # Сумма чисел в нечетных строках E
+    sum_odd_rows = sum(E[i, :].sum() for i in range(E.shape[0]) if i % 2 != 0)
+
+    if count_greater_k_even_cols > sum_odd_rows:
+        print("Количество чисел, больших k в четных столбцах E больше, чем сумма чисел в нечетных строках. Меняем C и E симметрично.")
+        if n % 2 == 0: #Меняем C и E симметрично
+            C = F[:half, half:].copy()
+            F[:half, half:] = np.fliplr(E.T)
+            F[half:, :half] = np.fliplr(C.T)
+        else:
+            C = F[:half, half + 1:].copy()
+            F[:half, half + 1:] = np.fliplr(E.T)
+            F[half + 1:, :half + 1] = np.fliplr(C.T)
+    else:
+        print("Количество чисел, больших k в четных столбцах E меньше или равно сумме чисел в нечетных строках. Меняем B и C несимметрично.")
+        if n % 2 == 0: #Меняем B и C несимметрично
+            B = F[half:, half:].copy()
+            C = F[:half, half:].copy()
+            F[:half, half:] = B
+            F[half:, half:] = C
+        else:
+            B = F[half + 1:, half + 1:].copy()
+            C = F[:half, half + 1:].copy()
+            F[:half, half + 1:] = B
+            F[half + 1:, half + 1:] = C
+
+    print("\nПреобразованная матрица F:\n", F)
+
+    det_A = np.linalg.det(A)
+    trace_F = np.trace(F)
+
+    print(f"\nОпределитель матрицы A: {det_A}")
+    print(f"Сумма диагональных элементов матрицы F: {trace_F}")
+
+    if det_A > trace_F:
+        print("\nОпределитель матрицы A больше суммы диагональных элементов матрицы F.")
+        AT = A.T
+        F_inv = np.linalg.inv(F)
+        result = A @ AT - k * F_inv
+        print(f"A @ AT:\n{A @ AT}")
+        print(f"F_inv:\n{F_inv}")
+        print(f"k * F_inv:\n{k * F_inv}")
+        print("\nРезультат A @ AT - k * F_inv:\n", result)
+    else:
+        print("\nОпределитель матрицы A меньше или равен сумме диагональных элементов матрицы F.")
+        AT = A.T
+        G = np.tril(A)
+        try:
+            F_inv = np.linalg.inv(F)
+            result = (AT + G - F_inv) * k
+            print(f"AT:\n{AT}")
+            print(f"G (нижняя треугольная матрица):\n{G}")
+            print(f"F_inv (обратная матрица):\n{F_inv}")
+            print(f"AT + G - F_inv:\n{AT + G - F_inv}")
+            print("\nРезультат (A + G - F) * K:\n", result)
+
+        except np.linalg.LinAlgError:
+            print("Матрица F необратима. Невозможно вычислить F_inv.")
+            result = None  # Или другое значение по умолчанию
+
+    #while result is not None:
+        plt.figure(figsize=(15, 5))
+        plt.subplot(131) # 1. Визуализация матрицы F
+        plt.imshow(F, cmap='viridis')
+        plt.colorbar()
+        plt.title("Матрица F")
+        plt.subplot(132) # 2. Сумма элементов по строкам
+        plt.plot(F.sum(axis=1), 'o-')
+        plt.title("Сумма по строкам")
+        plt.grid(True)
+        plt.subplot(133) # 3. Сумма элементов по столбцам
+        plt.plot(F.sum(axis=0), 's-')
+        plt.title("Сумма по столбцам")
+        plt.grid(True)
+        plt.tight_layout()
+        plt.show()
+
+if __name__ == "__main__":
+    main()
